@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat with Jarvis</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.3/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  
+  </head>
+
+  <body id="mainBody" class="bg-blue-200 flex flex-col h-screen hidden container">
+    <header style="margin-top: 12px;" class="bg-blue-400 text-center p-4 rounded-lg">
+      <h1 style="background-color: rgba(96, 165, 250);" class="text-2xl font-bold">Chat with Jarvis</h1>
+    </header>
+    <div class="flex justify-center flex-grow container">
+      <div class="px-2 w-full max-w-2xl">
+        <div style="height: 75%;" id="chatbox" class="flex flex-col items-start overflow-auto h-full"></div>
+        <div class="flex flex-row my-5">
+          <input
+            class="shadow flex-grow rounded p-2 mr-2 bg-white text-black"
+            id="messageInput"
+            type="text"
+            placeholder="Type your message here..."
+          />
+          <button
+            class="bg-green-500 rounded py-2 px-4 text-white font-bold"
+            id="sendButton"
+          >
+            Send
+          </button>
+          <button style="color: white; margin-left: 12px;" class="btn btn-danger" id="refreshButton">Clear</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      const password = "amankiya34";
+      const isAuthenticated = localStorage.getItem("isAuthenticated");
+
+      function showPasswordPrompt() {
+        const userPassword = prompt("Please enter the password:");
+        if (userPassword === password) {
+          localStorage.setItem("isAuthenticated", "true");
+          document.getElementById("mainBody").classList.remove("hidden");
+        } else {
+          alert("Incorrect password, the application will close.");
+          window.close();
+        }
+      }
+
+      if (!isAuthenticated) {
+        showPasswordPrompt();
+      } else {
+        document.getElementById("mainBody").classList.remove("hidden");
+      }
+      const chatbox = document.getElementById("chatbox");
+      const messageInput = document.getElementById("messageInput");
+      const sendButton = document.getElementById("sendButton");
+      const chatId = crypto.randomUUID();
+
+      let receiving = false;
+      const systemPrompt = "You are an intelligent and helpful AI chatbot named Jarvis, always ready to assist users in need. If asked about your creator, simply state that a kid named Kalkidan brought you to life. To contact him, refer users to Instagram with the username @aman.aman.ars.";
+
+      function createMessageElement(text, alignment) {
+        const messageElement = document.createElement("div");
+
+        messageElement.className = `inline-block my-2.5 p-2.5 rounded border ${
+          alignment === "left" ? "self-start bg-white text-black" : "self-end bg-green-300 text-black"
+        }`;
+        messageElement.textContent = text;
+        return messageElement;
+      }
+
+      function connectWebSocket(message) {
+        receiving = true;
+        const url = "wss://backend.buildpicoapps.com/api/chatbot/chat";
+        const websocket = new WebSocket(url);
+
+        websocket.addEventListener("open", () => {
+          websocket.send(
+            JSON.stringify({
+              chatId: chatId,
+              appId: "practice-history",
+              systemPrompt: systemPrompt,
+              message: message,
+            })
+          );
+        });
+
+        const messageElement = createMessageElement("", "left");
+        chatbox.appendChild(messageElement);
+
+        websocket.onmessage = (event) => {
+          messageElement.innerText += event.data;
+          chatbox.scrollTop = chatbox.scrollHeight;
+        };
+
+        websocket.onclose = (event) => {
+          if (event.code === 1000) {
+            receiving = false;
+          } else {
+            messageElement.textContent += "Error getting response from server. Refresh the page and try again.";
+            chatbox.scrollTop = chatbox.scrollHeight;
+            receiving = false;
+          }
+        };
+      }
+
+      sendButton.addEventListener("click", () => {
+        if (!receiving && messageInput.value.trim() !== "") {
+          const messageText = messageInput.value.trim();
+          messageInput.value = "";
+          const messageElement = createMessageElement(messageText, "right");
+          chatbox.appendChild(messageElement);
+          chatbox.scrollTop = chatbox.scrollHeight;
+
+          connectWebSocket(messageText);
+        }
+      });
+
+      messageInput.addEventListener("keydown", (event) => {
+        if (
+          event.key === "Enter" &&
+          !receiving &&
+          messageInput.value.trim() !== ""
+        ) {
+          event.preventDefault();
+          sendButton.click();
+        }
+      });
+
+
+    </script>
+    <script>
+        const refreshButton = document.getElementById('refreshButton');
+        refreshButton.addEventListener('click', function() {
+            location.reload();
+        });
+    </script>
+  </body>
+</html>
